@@ -5,7 +5,7 @@ import (
   "log"
 )
 
-func ExampleMainHandler() {
+func ExampleServe() {
   http.HandleFunc("/foo/bar", foobarHandler)
   log.Fatal(Serve(":9000", nil))
 }
