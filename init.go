@@ -23,9 +23,33 @@ func init() {
   flag.StringVar(&listenPort,"p","","listener port")
 }
 
+// applications need some way to access the port
+// TODO: this method will work only after grace.Serve is called.
+func GetListenPort(hport string) string {
+  return listenPort;
+}
+
 // start serving on hport. If running via socketmaster, the hport argument is
 // ignored. Also, if a port was specified via -p, it takes precedence on hport
 func Serve(hport string, handler http.Handler) error {
+  l,err := Listen(hport)
+  if err != nil {
+		log.Fatalln(err)
+  }
+
+	srv := &graceful.Server{
+		Timeout: 10 * time.Second,
+		Server: &http.Server{
+			Handler: handler,
+		},
+	}
+
+	log.Println("starting serve on ", hport)
+	return srv.Serve(l)
+}
+
+// This method can be used for any TCP Listener, e.g. non HTTP
+func Listen(hport string) (net.Listener,error) {
 	var l net.Listener
 
 	fd := os.Getenv("EINHORN_FDS")
@@ -50,17 +74,9 @@ func Serve(hport string, handler http.Handler) error {
 		var err error
 		l, err = net.Listen("tcp4", hport)
 		if err != nil {
-			log.Fatal(err)
+      return nil,err
 		}
 	}
 
-	srv := &graceful.Server{
-		Timeout: 10 * time.Second,
-		Server: &http.Server{
-			Handler: handler,
-		},
-	}
-
-	log.Println("starting serve on ", hport)
-	return srv.Serve(l)
+  return l,nil
 }
