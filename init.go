@@ -16,11 +16,13 @@ import (
 )
 
 var listenPort string
+var cfgtestFlag bool
 
 // add -p flag to the list of flags supported by the app,
 // and allow it to over-ride default listener port in config/app
 func init() {
   flag.StringVar(&listenPort,"p","","listener port")
+  flag.BoolVar(&cfgtestFlag,"t",false,"config test")
 }
 
 // applications need some way to access the port
@@ -32,6 +34,9 @@ func GetListenPort(hport string) string {
 // start serving on hport. If running via socketmaster, the hport argument is
 // ignored. Also, if a port was specified via -p, it takes precedence on hport
 func Serve(hport string, handler http.Handler) error {
+
+  checkConfigTest()
+
   l,err := Listen(hport)
   if err != nil {
 		log.Fatalln(err)
@@ -41,6 +46,8 @@ func Serve(hport string, handler http.Handler) error {
 		Timeout: 10 * time.Second,
 		Server: &http.Server{
 			Handler: handler,
+      ReadTimeout: 5 * time.Second,
+      WriteTimeout: 10 * time.Second,
 		},
 	}
 
@@ -70,6 +77,8 @@ func Listen(hport string) (net.Listener,error) {
     hport = ":" + listenPort
   }
 
+  checkConfigTest()
+
 	if l == nil {
 		var err error
 		l, err = net.Listen("tcp4", hport)
@@ -80,3 +89,12 @@ func Listen(hport string) (net.Listener,error) {
 
   return l,nil
 }
+
+func checkConfigTest() {
+  if cfgtestFlag == true {
+    log.Println("config test mode, exiting")
+    os.Exit(0)
+  }
+}
+
+
