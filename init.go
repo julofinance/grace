@@ -48,7 +48,7 @@ func ServerFastHTTP(hport string, handler fasthttp.RequestHandler) error {
 			log.Println("detected socketmaster, listening on", fd)
 			file := os.NewFile(uintptr(sock), "listener")
 
-			if err := syscall.SetsockoptInt(sock, syscall.SOL_SOCKET, syscall.SO_REUSEPORT, 1); err != nil {
+			if err := syscall.SetsockoptInt(sock, syscall.SOL_SOCKET, 0x0F, 1); err != nil {
 				return err
 			}
 			fl, err := net.FileListener(file)
