@@ -1,4 +1,4 @@
-// grace provides for graceful restart for go http servers.
+// Package grace provides for graceful restart for go http servers.
 // There are 2 parts to graceful restarts
 // 1. Share listening sockets (this is done via socketmaster binary)
 // 2. Close listener gracefully (via graceful)
@@ -83,7 +83,25 @@ func ServerFastHTTP(hport string, handler fasthttp.RequestHandler) error {
 // start serving on hport. If running via socketmaster, the hport argument is
 // ignored. Also, if a port was specified via -p, it takes precedence on hport
 func Serve(hport string, handler http.Handler) error {
+	timeout := 10 * time.Second
+	config := http.Server{
+		Handler:      handler,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
 
+	return ServeWithConfig(hport, timeout, config)
+}
+
+func Run(addr string, timeout time.Duration, n http.Handler) {
+	graceful.Run(addr, timeout, n)
+}
+
+func RunWithErr(addr string, timeout time.Duration, n http.Handler) error {
+	return graceful.RunWithErr(addr, timeout, n)
+}
+
+func ServeWithConfig(hport string, timeout time.Duration, config http.Server) error {
 	checkConfigTest()
 
 	l, err := Listen(hport)
@@ -92,12 +110,8 @@ func Serve(hport string, handler http.Handler) error {
 	}
 
 	srv := &graceful.Server{
-		Timeout: 10 * time.Second,
-		Server: &http.Server{
-			Handler:      handler,
-			ReadTimeout:  5 * time.Second,
-			WriteTimeout: 10 * time.Second,
-		},
+		Timeout: timeout,
+		Server:  &config,
 	}
 
 	log.Println("starting serve on ", hport)
