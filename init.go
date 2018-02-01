@@ -23,6 +23,13 @@ import (
 var listenPort string
 var cfgtestFlag bool
 
+// Config grace package config
+type Config struct {
+	Timeout          time.Duration
+	HTTPReadTimeout  time.Duration
+	HTTPWriteTimeout time.Duration
+}
+
 // add -p flag to the list of flags supported by the app,
 // and allow it to over-ride default listener port in config/app
 func init() {
@@ -30,12 +37,13 @@ func init() {
 	flag.BoolVar(&cfgtestFlag, "t", false, "config test")
 }
 
-// applications need some way to access the port
+// GetListenPort applications need some way to access the port
 // TODO: this method will work only after grace.Serve is called.
 func GetListenPort(hport string) string {
 	return listenPort
 }
 
+// ServerFastHTTP use fasthttp server
 func ServerFastHTTP(hport string, handler fasthttp.RequestHandler) error {
 	var l net.Listener
 	var err error
@@ -80,28 +88,20 @@ func ServerFastHTTP(hport string, handler fasthttp.RequestHandler) error {
 
 }
 
-// start serving on hport. If running via socketmaster, the hport argument is
+// Serve start serving on hport. If running via socketmaster, the hport argument is
 // ignored. Also, if a port was specified via -p, it takes precedence on hport
 func Serve(hport string, handler http.Handler) error {
-	timeout := 10 * time.Second
-	config := http.Server{
-		Handler:      handler,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
+	config := Config{
+		Timeout:          10 * time.Second,
+		HTTPReadTimeout:  5 * time.Second,
+		HTTPWriteTimeout: 10 * time.Second,
 	}
 
-	return ServeWithConfig(hport, timeout, config)
+	return ServeWithConfig(hport, config, handler)
 }
 
-func Run(addr string, timeout time.Duration, n http.Handler) {
-	graceful.Run(addr, timeout, n)
-}
-
-func RunWithErr(addr string, timeout time.Duration, n http.Handler) error {
-	return graceful.RunWithErr(addr, timeout, n)
-}
-
-func ServeWithConfig(hport string, timeout time.Duration, config http.Server) error {
+// ServeWithConfig serve using package config
+func ServeWithConfig(hport string, config Config, handler http.Handler) error {
 	checkConfigTest()
 
 	l, err := Listen(hport)
@@ -110,15 +110,29 @@ func ServeWithConfig(hport string, timeout time.Duration, config http.Server) er
 	}
 
 	srv := &graceful.Server{
-		Timeout: timeout,
-		Server:  &config,
+		Timeout: config.Timeout,
+		Server: &http.Server{
+			Handler:      handler,
+			ReadTimeout:  config.HTTPReadTimeout,
+			WriteTimeout: config.HTTPWriteTimeout,
+		},
 	}
 
 	log.Println("starting serve on ", hport)
 	return srv.Serve(l)
 }
 
-// This method can be used for any TCP Listener, e.g. non HTTP
+// Run exports Run() from grace package
+func Run(addr string, timeout time.Duration, n http.Handler) {
+	graceful.Run(addr, timeout, n)
+}
+
+// RunWithErr exports RunWithErr from grace package
+func RunWithErr(addr string, timeout time.Duration, n http.Handler) error {
+	return graceful.RunWithErr(addr, timeout, n)
+}
+
+// Listen This method can be used for any TCP Listener, e.g. non HTTP
 func Listen(hport string) (net.Listener, error) {
 	var l net.Listener
 
