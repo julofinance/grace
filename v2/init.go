@@ -25,7 +25,7 @@ type Server struct {
 	shutdownTimeout time.Duration
 }
 
-func ServeWithGin(port string, handler http.Handler) {
+func Serve(port string, handler http.Handler) {
 	httpServer := NewHttpServer(handler, Port(port))
 
 	// Waiting signal
