@@ -25,8 +25,11 @@ type Server struct {
 	shutdownTimeout time.Duration
 }
 
-func Serve(port string, handler http.Handler) {
-	httpServer := NewHttpServer(handler, Port(port))
+func Serve(port string, handler http.Handler, customOpts ...Option) {
+
+	customOpts = append(customOpts, Port(port))
+
+	httpServer := NewHttpServer(handler, customOpts...)
 
 	// Waiting signal
 	interrupt := make(chan os.Signal, 1)
