@@ -1,3 +1,6 @@
+//go:build !windows
+// +build !windows
+
 // Package grace provides for graceful restart for go http servers.
 // There are 2 parts to graceful restarts
 // 1. Share listening sockets (this is done via socketmaster binary)
